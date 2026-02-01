@@ -1,66 +1,111 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image } from 'react-native';
-import { createUser, getUserByEmail } from '../utils/dbHelper'; // <-- SQLite helpers
+import { createUser, getUserByEmail } from '../utils/dbHelper';
+import Icon from 'react-native-vector-icons/Ionicons';
 
 const RegisterScreen = ({ navigation }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password1, setPassword1] = useState('');
   const [password2, setPassword2] = useState('');
+  const [show, setShow] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  
 
   const handleRegister = async () => {
     if (!name || !email || !password1 || !password2) {
-      Alert.alert("Error", "Please fill in all fields");
+      Alert.alert('Error', 'Please fill all fields');
       return;
     }
-
     if (password1 !== password2) {
-      Alert.alert("Error", "Passwords do not match");
+      Alert.alert('Error', 'Passwords do not match');
       return;
     }
 
-    try {
-      // Check if user already exists
-      const existingUser = await getUserByEmail(email.trim());
-      if (existingUser) {
-        Alert.alert("Error", "Email already registered");
-        return;
-      }
-
-      // Create new user in SQLite
-      await createUser(name.trim(), email.trim(), password1);
-
-      Alert.alert("✅ Success", "Registration complete. Please login.");
-      navigation.replace('Login');
-
-    } catch (error) {
-      console.error("Registration error:", error);
-      Alert.alert("Registration Failed", "Something went wrong. Please try again.");
+    const exists = await getUserByEmail(email.trim());
+    if (exists) {
+      Alert.alert('Error', 'Email already registered');
+      return;
     }
+
+    await createUser(name.trim(), email.trim(), password1);
+    Alert.alert('✅ Success', 'Registration complete');
+    navigation.replace('Login');
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Register</Text>
 
-      <Image
-        source={require('../../assets/images/logo.jpeg')}
-        style={styles.logo}
+      <Image source={require('../../assets/images/logo.jpeg')} style={styles.logo} />
+
+      <TextInput
+        placeholder="Full Name"
+        placeholderTextColor="#9AA3AF"
+        style={styles.input}
+        value={name}
+        onChangeText={setName}
       />
 
-      <TextInput placeholder="Full Name" style={styles.input} value={name} onChangeText={setName} />
-      <TextInput placeholder="Email" style={styles.input} value={email} onChangeText={setEmail} keyboardType="email-address" />
-      <TextInput placeholder="Password" style={styles.input} secureTextEntry value={password1} onChangeText={setPassword1} />
-      <TextInput placeholder="Confirm Password" style={styles.input} secureTextEntry value={password2} onChangeText={setPassword2} />
+      <TextInput
+        placeholder="Email"
+        placeholderTextColor="#9AA3AF"
+        style={styles.input}
+        value={email}
+        onChangeText={setEmail}
+        autoCapitalize="none"
+      />
 
-      <TouchableOpacity style={styles.registerButton} onPress={handleRegister}>
-        <Text style={styles.registerText}>REGISTER</Text>
+      {/* PASSWORD */}
+      <View style={styles.passwordContainer}>
+        <TextInput
+          placeholder="Password"
+          placeholderTextColor="#9AA3AF"
+          secureTextEntry={!show}
+          style={styles.passwordInput}
+          value={password1}
+          onChangeText={setPassword1}
+        />
+        <TouchableOpacity
+          onPress={() => setShow(!show)}
+          style={styles.eye}
+        >
+          <Icon
+            name={show ? 'eye-off-outline' : 'eye-outline'}
+            size={22}
+            color="#6B7280"
+          />
+        </TouchableOpacity>
+      </View>
+
+
+      <View style={styles.passwordContainer}>
+        <TextInput
+          placeholder="Confirm password"
+          placeholderTextColor="#9AA3AF"
+          secureTextEntry={!showConfirm}
+          style={styles.passwordInput}
+          value={password2}
+          onChangeText={setPassword2}
+        />
+        <TouchableOpacity
+          onPress={() => setShowConfirm(!showConfirm)}
+          style={styles.eye}
+        >
+          <Icon
+            name={showConfirm ? 'eye-off-outline' : 'eye-outline'}
+            size={22}
+            color="#6B7280"
+          />
+        </TouchableOpacity>
+      </View>
+
+      <TouchableOpacity style={styles.primaryButton} onPress={handleRegister}>
+        <Text style={styles.primaryText}>REGISTER</Text>
       </TouchableOpacity>
 
-      <Text style={styles.have}>Already have an account?</Text>
-
-      <TouchableOpacity style={styles.loginButton} onPress={() => navigation.replace('Login')}>
-        <Text style={styles.loginText}>LOGIN</Text>
+      <TouchableOpacity onPress={() => navigation.replace('Login')}>
+        <Text style={styles.link}>Already have an account? LOGIN</Text>
       </TouchableOpacity>
     </View>
   );
@@ -70,35 +115,45 @@ export default RegisterScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, justifyContent: 'center', backgroundColor: '#fff' },
-  title: { fontSize: 28, fontWeight: 'bold', marginBottom: 20, color: '#001F54', textAlign: 'center' },
-  logo: {
-    width: 120,
-    height: 120,
-    resizeMode: 'contain',
-    alignSelf: 'center',
-    marginBottom: 20,
-    borderRadius: 60,
-  },
-  input: { borderWidth: 1, padding: 10, marginBottom: 10, borderRadius: 5, borderColor: '#ccc' },
-  have: { color: '#001F54', marginTop: 10, fontSize: 16, textAlign: 'center' },
-  loginButton: {
-    backgroundColor: '#fff',
+  title: { fontSize: 28, fontWeight: 'bold', color: '#001F54', textAlign: 'center', marginBottom: 20 },
+  logo: { width: 120, height: 120, alignSelf: 'center', marginBottom: 20, borderRadius: 60 },
+  input: {
+    borderWidth: 1,
     borderColor: '#001F54',
-    borderWidth: 2,
-    borderRadius: 5,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginTop: 10,
+    color: '#111827',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 12,
   },
-  loginText: { color: '#001F54', fontWeight: 'bold', fontSize: 16 },
-  registerButton: {
+
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#001F54',
+    borderRadius: 10,
+    marginBottom: 12,
+    paddingHorizontal: 12,
+    height: 50,
+  },
+
+  passwordInput: {
+    flex: 1,
+    color: '#111827',
+    fontSize: 16,
+  },
+
+  eye: {
+    paddingLeft: 10,
+  },
+
+
+  primaryButton: {
     backgroundColor: '#001F54',
-    borderColor: '#001F54',
-    borderWidth: 2,
-    borderRadius: 5,
-    paddingVertical: 12,
-    alignItems: 'center',
+    paddingVertical: 14,
+    borderRadius: 20,
     marginTop: 10,
   },
-  registerText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  primaryText: { color: '#fff', fontWeight: 'bold', textAlign: 'center' },
+  link: { color: '#001F54', textAlign: 'center', marginTop: 15 },
 });

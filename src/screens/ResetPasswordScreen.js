@@ -1,127 +1,161 @@
-// src/screens/ResetPasswordScreen.js
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
-  View, Text, TextInput, Button, Alert, StyleSheet, Platform, ToastAndroid,
+  View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Platform, ToastAndroid,
 } from 'react-native';
 import {
-  getCurrentUser,
-  verifyUserPassword,
   updateUserPassword,
   logoutUser,
+  getUserById,
+  hashPassword,
+  getUserByEmail,
 } from '../utils/dbHelper';
+import Icon from 'react-native-vector-icons/Ionicons';
 
-const ResetPasswordScreen = ({ navigation }) => {
-  const [currentUser, setCurrentUser] = useState(null);
+
+const ResetPasswordScreen = ({ route, navigation }) => {
+  const { userId, email, fromForgot } = route.params || {};
+
+  const [showOld, setShowOld] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const loadUser = async () => {
-      const u = await getCurrentUser();
-      setCurrentUser(u); // null if no session
-    };
-    loadUser();
-  }, []);
+  const showToast = (msg) =>
+    Platform.OS === 'android'
+      ? ToastAndroid.show(msg, ToastAndroid.SHORT)
+      : Alert.alert(msg);
 
-  const showToast = (msg) => {
-    if (Platform.OS === 'android') ToastAndroid.show(msg, ToastAndroid.SHORT);
-    else Alert.alert(msg);
-  };
+  const handleReset = async () => {
+  if (!fromForgot && !oldPassword) {
+    Alert.alert('Error', 'Please enter current password');
+    return;
+  }
 
-  const handleChangePassword = async () => {
-    if (!currentUser) {
-      Alert.alert('Not logged in', 'You must be logged in to change your password.');
-      return;
-    }
-    if (!oldPassword || !newPassword || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields.');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      Alert.alert('Error', 'New passwords do not match.');
-      return;
-    }
+  if (!newPassword || !confirmPassword) {
+    Alert.alert('Error', 'Please fill all fields');
+    return;
+  }
 
-    setLoading(true);
-    try {
-      // Verify old password
-      const ok = await verifyUserPassword(currentUser.email, oldPassword);
-      if (!ok) {
-        Alert.alert('Error', 'Current password is incorrect.');
+  if (newPassword !== confirmPassword) {
+    Alert.alert('Error', 'Passwords do not match');
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    // -------- VERIFY OLD PASSWORD (IF LOGGED IN) --------
+    if (!fromForgot) {
+      const user = await getUserByEmail(email);
+      if (!user) {
+        Alert.alert('Error', 'User not found');
         setLoading(false);
         return;
       }
 
-      // Update password in local DB
-      await updateUserPassword(currentUser.id, newPassword);
-
-      // For security, log the user out and ask to login again
-      await logoutUser();
-
-      showToast('✅ Password updated. Please login again.');
-      navigation.replace('Login');
-    } catch (err) {
-      console.error('Password change error:', err);
-      Alert.alert('Error', 'Could not update password. Try again.');
-    } finally {
-      setLoading(false);
+      const oldHash = hashPassword(oldPassword);
+      if (oldHash !== user.password) {
+        Alert.alert('Error', 'Current password incorrect');
+        setLoading(false);
+        return;
+      }
     }
-  };
 
-  if (!currentUser) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.title}>Change Password</Text>
-        <Text style={styles.info}>
-          You must be logged in to change your password. Please login first.
-        </Text>
+    // -------- UPDATE PASSWORD (HASHED) --------
+    await updateUserPassword(userId, newPassword);
 
-        <View style={{ marginTop: 20 }}>
-          <Button title="Go to Login" color="#001F54" onPress={() => navigation.replace('Login')} />
-        </View>
-      </View>
-    );
+    // -------- LOGOUT FOR SECURITY --------
+    await logoutUser();
+
+    showToast('✅ Password updated. Please login again.');
+    navigation.replace('Login');
+
+  } catch (err) {
+    console.error('Reset password error:', err);
+    Alert.alert('Error', 'Could not reset password');
+  } finally {
+    setLoading(false);
   }
+};
+
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Change Password</Text>
-      <Text style={styles.sub}>Account: {currentUser.email}</Text>
+      <Text style={styles.title}>Reset Password</Text>
+      <Text style={styles.sub}>{email}</Text>
 
-      <TextInput
-        placeholder="Current password"
-        secureTextEntry
-        style={styles.input}
-        value={oldPassword}
-        onChangeText={setOldPassword}
-      />
+      {!fromForgot && (
+        <View style={styles.inputWrapper}>
+          <TextInput
+            placeholder="Current password"
+            placeholderTextColor="#9AA3AF"
+            secureTextEntry={!showOld}
+            style={styles.input}
+            value={oldPassword}
+            onChangeText={setOldPassword}
+          />
+          <TouchableOpacity onPress={() => setShowOld(!showOld)}>
+            <Icon
+              name={showOld ? 'eye-off-outline' : 'eye-outline'}
+              size={22}
+              color="#6B7280"
+            />
+          </TouchableOpacity>
+        </View>
+      )}
 
-      <TextInput
-        placeholder="New password"
-        secureTextEntry
-        style={styles.input}
-        value={newPassword}
-        onChangeText={setNewPassword}
-      />
 
-      <TextInput
-        placeholder="Confirm new password"
-        secureTextEntry
-        style={styles.input}
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-      />
-
-      <View style={{ marginTop: 10 }}>
-        <Button
-          title={loading ? 'Updating...' : 'Update Password'}
-          color="#001F54"
-          onPress={handleChangePassword}
-          disabled={loading}
+      <View style={styles.inputWrapper}>
+        <TextInput
+          placeholder="New password"
+          placeholderTextColor="#9AA3AF"
+          secureTextEntry={!showNew}
+          style={styles.input}
+          value={newPassword}
+          onChangeText={setNewPassword}
         />
+        <TouchableOpacity onPress={() => setShowNew(!showNew)}>
+          <Icon
+            name={showNew ? 'eye-off-outline' : 'eye-outline'}
+            size={22}
+            color="#6B7280"
+          />
+        </TouchableOpacity>
       </View>
+
+
+      <View style={styles.inputWrapper}>
+        <TextInput
+          placeholder="Confirm new password"
+          placeholderTextColor="#9AA3AF"
+          secureTextEntry={!showConfirm}
+          style={styles.input}
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+        />
+        <TouchableOpacity onPress={() => setShowConfirm(!showConfirm)}>
+          <Icon
+            name={showConfirm ? 'eye-off-outline' : 'eye-outline'}
+            size={22}
+            color="#6B7280"
+          />
+        </TouchableOpacity>
+      </View>
+
+
+      <TouchableOpacity
+        style={styles.primaryBtn}
+        onPress={handleReset}
+        disabled={loading}
+      >
+        <Text style={styles.primaryText}>
+          {loading ? 'Updating...' : 'UPDATE PASSWORD'}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -130,8 +164,35 @@ export default ResetPasswordScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'center', padding: 20, backgroundColor: '#fff' },
-  title: { fontSize: 22, fontWeight: 'bold', marginBottom: 12, color: '#001F54', textAlign: 'center' },
-  sub: { fontSize: 14, color: '#333', marginBottom: 20, textAlign: 'center' },
-  info: { fontSize: 16, color: '#444', textAlign: 'center' },
-  input: { borderWidth: 1, borderRadius: 5, padding: 10, marginBottom: 12, borderColor: '#ccc' },
+  title: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', color: '#001F54' },
+  sub: { textAlign: 'center', marginBottom: 20, color: '#444' },
+  input: {
+    padding: 12,
+    borderRadius: 6,
+    color: '#111827',
+  },
+  primaryBtn: {
+    backgroundColor: '#001F54',
+    paddingVertical: 14,
+    borderRadius: 20,
+    alignItems: 'center',
+  },
+  primaryText: { color: '#fff', fontWeight: 'bold' },
+
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+  },
+
+  input: {
+    flex: 1,
+    paddingVertical: 12,
+    color: '#111827',
+  },
+
 });

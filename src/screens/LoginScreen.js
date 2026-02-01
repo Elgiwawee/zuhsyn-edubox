@@ -1,22 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import {
-  View, Text, TextInput, Button, TouchableOpacity,
-  StyleSheet, Image, Alert, Platform, ToastAndroid,
+  View,
+  Text,
+  TextInput,
+  Button,
+  TouchableOpacity,
+  StyleSheet,
+  Image,
+  Alert,
+  Platform,
+  ToastAndroid,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { loginUser } from '../../utils/dbHelpers'; // SQLite helper
+import { loginUser } from '../utils/dbHelper';
+import { AuthContext } from '../context/AuthContext';
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const { login } = useContext(AuthContext);
 
   const handleLogin = async () => {
-    if (!email.trim() || !password) {
-      Alert.alert('❌ Error', 'Please enter email and password');
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('❌ Error', 'Please enter your email and password.');
       return;
     }
 
     try {
+      setLoading(true);
       const user = await loginUser(email.trim(), password);
 
       if (!user) {
@@ -24,24 +39,19 @@ const LoginScreen = ({ navigation }) => {
         return;
       }
 
-      // Save user info for global access
       await AsyncStorage.multiSet([
         ['current_user', JSON.stringify(user)],
-        ['user_name', user.name || ''],
-        ['user_level', user.level ? String(user.level) : '1'],
-        ['user_last_subject', user.lastSubject || 'Maths']
       ]);
 
-      if (Platform.OS === 'android') {
-        ToastAndroid.show('✅ Login Successful', ToastAndroid.SHORT);
-      } else {
-        Alert.alert('✅ Login Successful');
-      }
+      await login(user);
 
-      navigation.replace('Main'); // Navigate to the dashboard stack
-    } catch (err) {
-      console.error('Login error:', err);
-      Alert.alert('❌ Error', 'Something went wrong. Please try again.');
+      Platform.OS === 'android'
+        ? ToastAndroid.show('✅ Login Successful', ToastAndroid.SHORT)
+        : Alert.alert('✅ Login Successful');
+    } catch (e) {
+      Alert.alert('❌ Error', 'Something went wrong.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -54,8 +64,10 @@ const LoginScreen = ({ navigation }) => {
         style={styles.logo}
       />
 
+      {/* EMAIL */}
       <TextInput
         placeholder="Email"
+        placeholderTextColor="#9AA3AF"
         style={styles.input}
         value={email}
         onChangeText={setEmail}
@@ -63,31 +75,51 @@ const LoginScreen = ({ navigation }) => {
         keyboardType="email-address"
       />
 
-      <TextInput
-        placeholder="Password"
-        style={styles.input}
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
+      {/* PASSWORD */}
+      <View style={styles.passwordContainer}>
+        <TextInput
+          placeholder="Password"
+          placeholderTextColor="#9AA3AF"
+          style={styles.passwordInput}
+          secureTextEntry={!showPassword}
+          value={password}
+          onChangeText={setPassword}
+        />
 
-      <View style={{ marginBottom: 20 }}>
-        <Button title="Login" color="#001F54" onPress={handleLogin} />
-      </View>
-
-      <View style={{ marginBottom: 30 }}>
-        <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
-          <Text style={styles.link}>Forgot Password?</Text>
+        <TouchableOpacity
+          onPress={() => setShowPassword(!showPassword)}
+          style={styles.eye}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Icon
+            name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+            size={22}
+            color="#6B7280"
+          />
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.forget}>Don't have an account?</Text>
+
+      <View style={{ marginBottom: 20 }}>
+        <Button
+          title={loading ? 'Logging in...' : 'Login'}
+          color="#001F54"
+          onPress={handleLogin}
+          disabled={loading}
+        />
+      </View>
+
+      <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
+        <Text style={styles.link}>Forgot Password?</Text>
+      </TouchableOpacity>
+
+      <Text style={styles.text}>Don’t have an account?</Text>
 
       <TouchableOpacity
-        style={styles.registerButton}
+        style={styles.outlineButton}
         onPress={() => navigation.replace('Register')}
       >
-        <Text style={styles.registerText}>REGISTER</Text>
+        <Text style={styles.outlineText}>REGISTER</Text>
       </TouchableOpacity>
     </View>
   );
@@ -96,58 +128,50 @@ const LoginScreen = ({ navigation }) => {
 export default LoginScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    color: '#001F54',
-    textAlign: 'center',
-  },
-  logo: {
-    width: 120,
-    height: 120,
-    resizeMode: 'contain',
-    alignSelf: 'center',
-    marginBottom: 20,
-    borderRadius: 60,
-  },
+  container: { flex: 1, padding: 20, justifyContent: 'center', backgroundColor: '#fff' },
+  title: { fontSize: 28, fontWeight: 'bold', color: '#001F54', textAlign: 'center', marginBottom: 20 },
+  logo: { width: 120, height: 120, alignSelf: 'center', marginBottom: 20, borderRadius: 60 },
   input: {
     borderWidth: 1,
-    padding: 10,
-    marginBottom: 10,
-    borderRadius: 5,
-    borderColor: '#ccc',
-  },
-  link: {
-    color: '#001F54',
-    marginTop: 10,
-    textAlign: 'center',
-  },
-  forget: {
-    color: '#001F54',
-    marginTop: 10,
-    fontSize: 16,
-    textAlign: 'center',
-  },
-  registerButton: {
-    backgroundColor: '#fff',
     borderColor: '#001F54',
-    borderWidth: 2,
-    borderRadius: 5,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    color: '#111827',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 12,
+  },
+  passwordContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#001F54',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    marginBottom: 15,
+  },
+
+  passwordInput: {
+    flex: 1,
+    fontSize: 15,
+    color: '#111827',
+    paddingVertical: 10,
+  },
+
+  eye: {
+    marginLeft: 8,
+  },
+
+  eyeText: {
+    fontSize: 18,
+  },
+  link: { color: '#001F54', textAlign: 'center', marginVertical: 15 },
+  text: { textAlign: 'center', color: '#001F54', fontSize: 16 },
+  outlineButton: {
+    borderWidth: 2,
+    borderColor: '#001F54',
+    paddingVertical: 12,
+    borderRadius: 30,
     marginTop: 10,
   },
-  registerText: {
-    color: '#001F54',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
+  outlineText: { color: '#001F54', textAlign: 'center', fontWeight: 'bold'},
 });
+  

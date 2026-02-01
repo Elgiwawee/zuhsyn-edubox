@@ -1,7 +1,8 @@
 // context/AuthContext.js
 import React, { createContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { initDB } from '../utils/database'; // Make sure path is correct
+import { initDB } from '../utils/database';
+import { logoutUser as dbLogoutUser } from '../utils/dbHelper';
 
 export const AuthContext = createContext();
 
@@ -9,53 +10,52 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ Load user from AsyncStorage on app start
+  // LOAD USER ON APP START
   useEffect(() => {
     const loadUser = async () => {
       try {
-        await initDB(); // Initialize SQLite DB
+        await initDB();
         const savedUser = await AsyncStorage.getItem('user');
+
         if (savedUser) {
           setUser(JSON.parse(savedUser));
+          console.log('🔐 User loaded');
+        } else {
+          setUser(null);
+          console.log('🚪 No saved user');
         }
-      } catch (error) {
-        console.log('Error loading user:', error);
+      } catch (err) {
+        console.error('❌ Auth load error:', err);
+        setUser(null);
       } finally {
         setLoading(false);
       }
     };
+
     loadUser();
   }, []);
 
-  // ✅ Login user
+  // LOGIN
   const login = async (userData) => {
-    try {
-      await AsyncStorage.setItem('user', JSON.stringify(userData));
-      setUser(userData);
-    } catch (error) {
-      console.log('Login error:', error);
-    }
+    await AsyncStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData);
+    console.log('✅ Logged in');
   };
 
-  // ✅ Logout user
+  // LOGOUT (🔥 THIS IS THE MAGIC)
   const logout = async () => {
     try {
-      await AsyncStorage.removeItem('user');
-      setUser(null);
-    } catch (error) {
-      console.log('Logout error:', error);
+      await dbLogoutUser(); // update DB
+      await AsyncStorage.removeItem('user'); // clear storage
+      setUser(null); // 🔥 THIS SWITCHES NAVIGATOR
+      console.log('🚪 Logged out');
+    } catch (err) {
+      console.error('❌ Logout error:', err);
     }
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        login,
-        logout,
-      }}
-    >
+    <AuthContext.Provider value={{ user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

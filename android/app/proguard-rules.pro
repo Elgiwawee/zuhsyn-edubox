@@ -1,10 +1,58 @@
-# Add project specific ProGuard rules here.
-# By default, the flags in this file are appended to flags specified
-# in /usr/local/Cellar/android-sdk/24.3.3/tools/proguard/proguard-android.txt
-# You can edit the include path and order by changing the proguardFiles
-# directive in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+############################################
+# React Native Core
+############################################
+-keep class com.facebook.react.** { *; }
+-dontwarn com.facebook.react.**
 
-# Add any project specific keep options here:
+############################################
+# Hermes
+############################################
+-keep class com.facebook.hermes.** { *; }
+-dontwarn com.facebook.hermes.**
+
+############################################
+# Lottie Animations
+############################################
+-keep class com.airbnb.lottie.** { *; }
+-dontwarn com.airbnb.lottie.**
+
+############################################
+# Gesture Handler
+############################################
+-keep class com.swmansion.gesturehandler.** { *; }
+-dontwarn com.swmansion.gesturehandler.**
+
+############################################
+# Async Storage
+############################################
+-keep class com.reactnativecommunity.asyncstorage.** { *; }
+-keepclassmembers class com.reactnativecommunity.asyncstorage.** { *; }
+-dontwarn com.reactnativecommunity.asyncstorage.**
+
+############################################
+# React Native Sound
+############################################
+-keep class com.zmxv.RNSoundModule.** { *; }
+-dontwarn com.zmxv.RNSoundModule.**
+
+############################################
+# Prevent stripping native modules
+############################################
+-keep class * extends com.facebook.react.bridge.NativeModule { *; }
+-keepclassmembers class * extends com.facebook.react.bridge.NativeModule {
+    public <init>(...);
+}
+
+############################################
+# Keep annotations
+############################################
+-keepattributes *Annotation*
+
+############################################
+# Remove logs in release
+############################################
+-assumenosideeffects class android.util.Log {
+    public static *** d(...);
+    public static *** v(...);
+    public static *** i(...);
+}

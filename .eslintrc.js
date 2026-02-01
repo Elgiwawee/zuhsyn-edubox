@@ -1,4 +1,14 @@
 module.exports = {
   root: true,
-  extends: '@react-native',
+  env: {
+    es2021: true,
+    node: true,
+  },
+  extends: [
+    '@react-native-community',
+  ],
+  plugins: ['react-native'],
+  rules: {
+    'react-native/no-raw-text': 'error',
+  },
 };

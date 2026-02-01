@@ -1,3 +1,4 @@
+// components/HeaderTitle.js
 import React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 
@@ -7,33 +8,30 @@ const HeaderTitle = () => {
       <Image
         source={require('../../assets/images/logo.jpeg')}
         style={styles.logo}
+        resizeMode="contain"
       />
-      <Text style={styles.title}>ZUHSYN EDUBOX</Text> {/* Line break to stack text */}
+      <Text style={styles.title}>ZUHSYN EDUBOX</Text>
     </View>
   );
 };
 
-export default HeaderTitle
+export default React.memo(HeaderTitle);
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row', 
+    flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'wrap', 
-    maxWidth: 160, 
+    maxWidth: 180,
   },
   logo: {
     width: 32,
     height: 32,
-    resizeMode: 'contain',
     marginRight: 8,
-    borderRadius: 15,
+    borderRadius: 16,
   },
   title: {
     fontSize: 14,
-    fontWeight: 'bold',
-    color: '#fff', 
-    lineHeight: 18,
-    
+    fontWeight: '700',
+    color: '#fff',
   },
 });

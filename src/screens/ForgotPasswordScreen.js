@@ -1,64 +1,59 @@
-// screens/ForgotPasswordScreen.js
-
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { getDBConnection } from '../utils/database'; // ✅ your SQLite connection helper
+import { getUserByEmail } from '../utils/dbHelper';
 
 const ForgotPasswordScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
 
-  const handleSendResetLink = async () => {
+  const handleVerifyEmail = async () => {
     if (!email.trim()) {
-      Alert.alert('Error', 'Please enter your email.');
+      Alert.alert('Error', 'Please enter your email');
       return;
     }
 
     try {
-      const db = await getDBConnection();
-      const results = await db.executeSql(`SELECT * FROM users WHERE email = ?`, [email]);
+      const user = await getUserByEmail(email.trim());
 
-      if (results[0].rows.length > 0) {
-        // ✅ Email found in local database
-        Alert.alert(
-          'Success',
-          'Email found. You can now reset your password.',
-          [
-            {
-              text: 'OK',
-              onPress: () => navigation.navigate('ResetPassword', { email }),
-            },
-          ]
-        );
-      } else {
-        Alert.alert('Error', 'No account found with this email.');
+      if (!user) {
+        Alert.alert('Error', 'No account found with this email');
+        return;
       }
-    } catch (error) {
-      console.log('Error checking email:', error);
-      Alert.alert('Error', 'Something went wrong. Please try again.');
+
+      // ✅ Navigate with userId
+      navigation.replace('ResetPassword', {
+        userId: user.id,
+        email: user.email,
+        fromForgot: true,
+      });
+
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Error', 'Something went wrong');
     }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Reset Password</Text>
-      <Text style={styles.description}>
-        Enter your email address to reset your password.
+      <Text style={styles.title}>Forgot Password</Text>
+      <Text style={styles.info}>
+        Enter your email to reset your password
       </Text>
+
       <TextInput
         placeholder="Email"
+        placeholderTextColor="#9AA3AF"
         style={styles.input}
         value={email}
         onChangeText={setEmail}
-        keyboardType="email-address"
         autoCapitalize="none"
       />
 
-      <TouchableOpacity style={styles.resetButton} onPress={handleSendResetLink}>
-        <Text style={styles.resetText}>Verify Email</Text>
+      <TouchableOpacity style={styles.primaryBtn} onPress={handleVerifyEmail}>
+        <Text style={styles.primaryText}>VERIFY EMAIL</Text>
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => navigation.goBack()}>
-        <Text style={styles.backLink}>Back to Login</Text>
+        <Text style={styles.link}>Back to Login</Text>
       </TouchableOpacity>
     </View>
   );
@@ -67,47 +62,23 @@ const ForgotPasswordScreen = ({ navigation }) => {
 export default ForgotPasswordScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: '#001F54',
-    textAlign: 'center',
-    marginBottom: 10,
-  },
-  description: {
-    textAlign: 'center',
-    fontSize: 16,
-    marginBottom: 20,
-    color: '#333',
-  },
+  container: { flex: 1, justifyContent: 'center', padding: 20, backgroundColor: '#fff' },
+  title: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', color: '#001F54' },
+  info: { textAlign: 'center', color: '#444', marginVertical: 12 },
   input: {
     borderWidth: 1,
     borderColor: '#ccc',
-    padding: 10,
-    marginBottom: 20,
-    borderRadius: 5,
+    padding: 12,
+    borderRadius: 6,
+    marginBottom: 16,
+    color: '#111827',
   },
-  resetButton: {
+  primaryBtn: {
     backgroundColor: '#001F54',
-    borderRadius: 5,
-    paddingVertical: 12,
+    paddingVertical: 14,
+    borderRadius: 20,
     alignItems: 'center',
   },
-  resetText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  backLink: {
-    marginTop: 20,
-    color: '#001F54',
-    textAlign: 'center',
-    fontSize: 16,
-  },
+  primaryText: { color: '#fff', fontWeight: 'bold' },
+  link: { textAlign: 'center', color: '#001F54', marginTop: 20 },
 });

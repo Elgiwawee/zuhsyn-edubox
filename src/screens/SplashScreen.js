@@ -1,56 +1,52 @@
 // src/screens/SplashScreen.js
-import React, { useEffect } from 'react';
+// src/screens/SplashScreen.js
+import React from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import LottieView from 'lottie-react-native';
 import Colors from '../constants/colors';
-import { getCurrentUser } from '../utils/dbHelper';
+import { Show } from '../components/SafeConditional';
 
-const SplashScreen = ({ navigation }) => {
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      try {
-        const user = await getCurrentUser();
-        if (user) {
-          // If session exists, go straight to Home/Dashboard
-          navigation.replace('Home'); 
-        } else {
-          // Otherwise, go to Login
-          navigation.replace('Login');
-        }
-      } catch (err) {
-        console.error('Error checking session:', err);
-        navigation.replace('Login');
-      }
-    }, 2000); // 2 seconds splash
 
-    return () => clearTimeout(timer);
-  }, []);
-
+const SplashScreen = () => {
   return (
     <View style={styles.container}>
-      <Image
-        source={require('../../assets/images/logo.jpeg')}
-        style={styles.logo}
-      />
+      {/* LOGO */}
+      <Show when={true}>
+        <Image
+          source={require('../../assets/images/logo.jpeg')}
+          style={styles.logo}
+        />
+      </Show>
 
       <View style={styles.row}>
+        {/* TEXT */}
         <View style={styles.textContainer}>
-          <Text style={styles.zuhsyn}>ZUHSYN</Text>
-          <Text style={styles.edu}>EDU</Text>
+          <Text style={styles.zuhsyn}>
+            {'ZUHSYN'}
+          </Text>
+
+          <Text style={styles.edu}>
+            {'EDU'}
+          </Text>
         </View>
 
-        <LottieView
-          source={require('../../assets/animations/edu-box.json')}
-          autoPlay
-          loop
-          style={styles.animation}
-        />
+        {/* LOTTIE */}
+        <Show when={true}>
+          <LottieView
+            source={require('../../assets/animations/edu-box.json')}
+            autoPlay
+            loop
+            style={styles.animation}
+          />
+        </Show>
       </View>
     </View>
   );
+
 };
 
 export default SplashScreen;
+
 
 const styles = StyleSheet.create({
   container: {
