@@ -1,4 +1,5 @@
 # OSX
+
 #
 .DS_Store
 
@@ -73,3 +74,9 @@ yarn-error.log
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+*.code-workspace
+android/link-assets-manifest.json
+ios/link-assets-manifest.json
+
+
+
